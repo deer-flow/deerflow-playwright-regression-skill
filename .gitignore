@@ -1,0 +1,4 @@
+node_modules/
+assets/playwright-runner/test-results/
+*.log
+.DS_Store
