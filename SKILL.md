@@ -16,7 +16,7 @@ Use this skill for repeatable Playwright regression on `deer-flow`, especially w
 - Debugging a failed spec with `playwright-cli`
 - Adding or refining deer-flow e2e cases
 
-If the user wants task scheduling, combine this skill with `agentforge`. If they only want manual browser exploration, still use this skill but prefer `playwright-cli` over writing new tests.
+If the user only wants manual browser exploration, still use this skill but prefer `playwright-cli` over writing new tests.
 
 ## Default Operating Mode
 
