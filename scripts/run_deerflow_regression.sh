@@ -8,7 +8,7 @@ Usage:
 
 Options:
   --repo PATH            deer-flow git repo root. Defaults to current git root.
-  --branch REF           Git ref to test. Default: upstream/main
+  --branch REF           Git ref to test. Default: upstream/main (latest bytedance/deer-flow main when upstream is configured)
   --worktree-dir PATH    Temporary worktree path.
   --suite NAME           mock or live. Default: mock
   --base-url URL         Base URL for Playwright. Defaults by suite.
@@ -155,6 +155,10 @@ fi
 
 if ! git -C "$repo_root" remote get-url "$fetch_remote" >/dev/null 2>&1; then
   printf 'Git remote not found: %s\n' "$fetch_remote" >&2
+  if [[ "$branch_ref" == "upstream/main" ]]; then
+    printf 'Default mode expects an upstream remote that points to bytedance/deer-flow.\n' >&2
+    printf 'Either add upstream or rerun with --repo and --branch for an explicit target.\n' >&2
+  fi
   exit 6
 fi
 

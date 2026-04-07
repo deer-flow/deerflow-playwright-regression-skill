@@ -31,5 +31,5 @@ Use this reference only when the user asks to create or expand Playwright specs.
 
 - Prefer mock-safe regression for daily runs.
 - Keep live smoke intentionally small.
-- Test against `origin/main` in an isolated worktree, not the user's dirty workspace.
+- Test against the selected repo/ref in an isolated worktree, defaulting to the latest `main` from `bytedance/deer-flow`, not the user's dirty workspace.
 - Use `playwright-cli` for failure diagnosis, not for the scheduled regression executor.
