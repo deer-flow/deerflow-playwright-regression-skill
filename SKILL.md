@@ -32,7 +32,7 @@ If the user wants task scheduling, combine this skill with `agentforge`. If they
 The helper script prepares a clean worktree and runs the skill-bundled Playwright config by default:
 
 ```bash
-bash /Users/hetao/.codex/skills/deerflow-playwright-regression/scripts/run_deerflow_regression.sh \
+bash ./scripts/run_deerflow_regression.sh \
   --repo /path/to/deer-flow \
   --suite mock
 ```
@@ -40,7 +40,7 @@ bash /Users/hetao/.codex/skills/deerflow-playwright-regression/scripts/run_deerf
 Run against a live stack that is already up:
 
 ```bash
-bash /Users/hetao/.codex/skills/deerflow-playwright-regression/scripts/run_deerflow_regression.sh \
+bash ./scripts/run_deerflow_regression.sh \
   --repo /path/to/deer-flow \
   --suite live \
   --base-url http://127.0.0.1:2026 \
@@ -50,7 +50,7 @@ bash /Users/hetao/.codex/skills/deerflow-playwright-regression/scripts/run_deerf
 Use a custom start command:
 
 ```bash
-bash /Users/hetao/.codex/skills/deerflow-playwright-regression/scripts/run_deerflow_regression.sh \
+bash ./scripts/run_deerflow_regression.sh \
   --repo /path/to/deer-flow \
   --suite mock \
   --start-cmd 'cd frontend && pnpm dev --hostname 127.0.0.1 --port 3000'
