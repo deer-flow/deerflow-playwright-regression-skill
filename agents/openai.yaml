@@ -1,4 +1,0 @@
-interface:
-  display_name: "DeerFlow Playwright Regression"
-  short_description: "Run deer-flow Playwright regression on main"
-  default_prompt: "Run deer-flow Playwright regression against the user-specified repo/ref or, by default, the latest main from bytedance/deer-flow in an isolated worktree, keep artifacts, and summarize failures."
