@@ -33,6 +33,7 @@ async function createTitledThread(request: APIRequestContext, title: string) {
 }
 
 test.describe("deer-flow local smoke", () => {
+  // P0 — run in both mock and live suites
   test("workspace new chat page loads", async ({ page }) => {
     if (!isLiveSuite) {
       await page.route("**/api/models", async (route) => {
@@ -70,82 +71,82 @@ test.describe("deer-flow local smoke", () => {
     await expect(page.getByPlaceholder("e.g. code-reviewer")).toBeVisible();
   });
 
-  test.skip(
-    !isLiveSuite,
-    "live-only smoke tests run only when DEERFLOW_E2E_SUITE=live",
-  );
+  // P1 — live backend only; nested describe so test.skip applies only here
+  test.describe("live", () => {
+    test.skip(!isLiveSuite, "live-only smoke tests run only when DEERFLOW_E2E_SUITE=live");
 
-  test("live models api returns configured models", async ({ request }) => {
-    const response = await request.get("/api/models");
-    expect(response.ok()).toBeTruthy();
+    test("live models api returns configured models", async ({ request }) => {
+      const response = await request.get("/api/models");
+      expect(response.ok()).toBeTruthy();
 
-    const payload = (await response.json()) as {
-      models?: Array<{ name?: string; display_name?: string }>;
-    };
-    expect(Array.isArray(payload.models)).toBeTruthy();
-    expect((payload.models ?? []).length).toBeGreaterThan(0);
-    expect(payload.models?.[0]?.name).toBeTruthy();
-  });
-
-  test("live existing thread page loads", async ({
-    page,
-    request,
-  }) => {
-    const title = uniqueThreadTitle();
-    const threadId = await createTitledThread(request, title);
-
-    await page.goto(`/workspace/chats/${threadId}`);
-    await expect(page).toHaveURL(new RegExp(`/workspace/chats/${threadId}$`));
-    await expect(page.getByRole("textbox").first()).toBeVisible();
-  });
-
-  test("live backend wait run returns an assistant response", async ({
-    request,
-  }) => {
-    const createRes = await request.post("/api/langgraph/threads", {
-      data: { metadata: { source: "playwright-regression" } },
+      const payload = (await response.json()) as {
+        models?: Array<{ name?: string; display_name?: string }>;
+      };
+      expect(Array.isArray(payload.models)).toBeTruthy();
+      expect((payload.models ?? []).length).toBeGreaterThan(0);
+      expect(payload.models?.[0]?.name).toBeTruthy();
     });
-    expect(createRes.ok()).toBeTruthy();
-    const created = (await createRes.json()) as { thread_id: string };
 
-    const runRes = await request.post(`/api/threads/${created.thread_id}/runs/wait`, {
-      timeout: 120_000,
-      data: {
-        assistant_id: "lead_agent",
-        input: {
-          messages: [
-            {
-              role: "user",
-              // Use a simple, open-ended prompt — avoid asking for a specific
-              // phrase since LLM output is non-deterministic and would cause
-              // false failures when the model paraphrases or wraps the text.
-              content: "Say hello in one sentence.",
-            },
-          ],
+    test("live existing thread page loads", async ({
+      page,
+      request,
+    }) => {
+      const title = uniqueThreadTitle();
+      const threadId = await createTitledThread(request, title);
+
+      await page.goto(`/workspace/chats/${threadId}`);
+      await expect(page).toHaveURL(new RegExp(`/workspace/chats/${threadId}$`));
+      await expect(page.getByRole("textbox").first()).toBeVisible();
+    });
+
+    test("live backend wait run returns an assistant response", async ({
+      request,
+    }) => {
+      const createRes = await request.post("/api/langgraph/threads", {
+        data: { metadata: { source: "playwright-regression" } },
+      });
+      expect(createRes.ok()).toBeTruthy();
+      const created = (await createRes.json()) as { thread_id: string };
+
+      const runRes = await request.post(`/api/threads/${created.thread_id}/runs/wait`, {
+        timeout: 120_000,
+        data: {
+          assistant_id: "lead_agent",
+          input: {
+            messages: [
+              {
+                role: "user",
+                // Use a simple, open-ended prompt — avoid asking for a specific
+                // phrase since LLM output is non-deterministic and would cause
+                // false failures when the model paraphrases or wraps the text.
+                content: "Say hello in one sentence.",
+              },
+            ],
+          },
+          context: {
+            mode: "flash",
+            thinking_enabled: false,
+            is_plan_mode: false,
+            subagent_enabled: false,
+          },
+          on_completion: "keep",
         },
-        context: {
-          mode: "flash",
-          thinking_enabled: false,
-          is_plan_mode: false,
-          subagent_enabled: false,
-        },
-        on_completion: "keep",
-      },
-    });
-    expect(runRes.ok()).toBeTruthy();
+      });
+      expect(runRes.ok()).toBeTruthy();
 
-    const payload = (await runRes.json()) as {
-      messages?: Array<{ type?: string; content?: unknown }>;
-    };
-    const messages = payload.messages ?? [];
-    const lastAssistant = [...messages].reverse().find((message) => {
-      return message.type === "ai";
-    });
+      const payload = (await runRes.json()) as {
+        messages?: Array<{ type?: string; content?: unknown }>;
+      };
+      const messages = payload.messages ?? [];
+      const lastAssistant = [...messages].reverse().find((message) => {
+        return message.type === "ai";
+      });
 
-    // Verify the run produced a non-empty assistant message — structural
-    // correctness only, no text-content assertion.
-    expect(lastAssistant).toBeTruthy();
-    const contentStr = JSON.stringify(lastAssistant?.content ?? "");
-    expect(contentStr.length).toBeGreaterThan(2);
+      // Verify the run produced a non-empty assistant message — structural
+      // correctness only, no text-content assertion.
+      expect(lastAssistant).toBeTruthy();
+      const contentStr = JSON.stringify(lastAssistant?.content ?? "");
+      expect(contentStr.length).toBeGreaterThan(2);
+    });
   });
 });
