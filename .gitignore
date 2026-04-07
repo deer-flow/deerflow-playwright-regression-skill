@@ -1,6 +1,6 @@
-node_modules/
-assets/playwright-runner/test-results/
-assets/playwright-runner/junit.xml
-assets/playwright-runner/playwright-report/
+**/node_modules/
+**/test-results/
+**/junit.xml
+**/playwright-report/
 *.log
 .DS_Store
