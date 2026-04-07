@@ -99,6 +99,16 @@ Use `playwright-cli` only for:
 
 Do not substitute `playwright-cli` for the scheduled regression run itself.
 
+## On Failure
+
+When one or more tests fail:
+
+1. **Do not retry automatically.** Surface the failure immediately so the user can decide.
+2. **Report the artifact path** (`run-summary.txt`, `test.log`, HTML report) so the user can inspect evidence.
+3. **Do not file GitHub Issues or send notifications** unless the user explicitly asks.
+4. **Artifact retention**: artifacts under `.artifacts/playwright/<timestamp>/` are ephemeral — clean them up once the user has confirmed they no longer need them. There is no automatic retention period; do not promise one.
+5. **Flaky tests**: if the same spec fails non-deterministically across consecutive runs, flag it as flaky to the user rather than marking the suite as broken.
+
 ## Reporting Back
 
 Always report:

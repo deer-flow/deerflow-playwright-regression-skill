@@ -120,6 +120,11 @@ case "$suite" in
     ;;
 esac
 
+if [[ ! "$base_url" =~ ^https?:// ]]; then
+  printf 'Invalid --base-url %q: must start with http:// or https://\n' "$base_url" >&2
+  exit 2
+fi
+
 if [[ -z "$worktree_dir" ]]; then
   worktree_dir="${TMPDIR:-/tmp}/deerflow-playwright-regression-main"
 fi
