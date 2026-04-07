@@ -1,17 +1,17 @@
 ---
 name: deerflow-playwright-regression
-description: Use when the user wants Codex to run, rerun, debug, or schedule Playwright regression for deer-flow against upstream/main or the latest upstream main branch. This skill prepares an isolated git worktree from upstream/main, prefers committed Playwright tests for repeatable runs, uses playwright-cli only for exploratory debugging, stores artifacts, and can guide daily regression workflows for mock or live suites.
+description: Use when the user wants Codex to run, rerun, debug, or schedule Playwright regression for deer-flow against a user-specified repo/ref or, by default, the latest main branch from https://github.com/bytedance/deer-flow. This skill prepares an isolated git worktree, prefers committed Playwright tests for repeatable runs, uses playwright-cli only for exploratory debugging, stores artifacts, and can guide daily regression workflows for mock or live suites.
 metadata:
   short-description: Run deer-flow Playwright regression on main
 ---
 
 # DeerFlow Playwright Regression
 
-Use this skill for repeatable Playwright regression on `deer-flow`, especially when the target is the latest `upstream/main` rather than the user's dirty working tree.
+Use this skill for repeatable Playwright regression on `deer-flow`, especially when the target is a clean repo/ref rather than the user's dirty working tree.
 
 ## Use This Skill For
 
-- Daily regression against `upstream/main`
+- Daily regression against the latest `main` from `https://github.com/bytedance/deer-flow`
 - Re-running failed Playwright suites in a clean worktree
 - Debugging a failed spec with `playwright-cli`
 - Adding or refining deer-flow e2e cases
@@ -20,12 +20,22 @@ If the user only wants manual browser exploration, still use this skill but pref
 
 ## Default Operating Mode
 
-1. Run against an isolated worktree checked out from `upstream/main`.
-2. Prefer the skill-bundled Playwright runner for local-only regression.
-3. If the repo already contains committed Playwright specs and the user explicitly wants them, run those instead.
-4. Use `playwright-cli` only to inspect failures, verify selectors, or reproduce a bug interactively.
-5. Default to a mock-safe suite unless the user explicitly asks for live backend coverage.
-6. Keep evidence: HTML report, junit, logs, screenshots, traces.
+1. Allow the user to specify the local repo root and the branch/ref to test.
+2. If the user does not specify either, default to the latest `main` from `https://github.com/bytedance/deer-flow`.
+3. Run against an isolated worktree checked out from that target ref.
+4. Prefer the skill-bundled Playwright runner for local-only regression.
+5. If the repo already contains committed Playwright specs and the user explicitly wants them, run those instead.
+6. Use `playwright-cli` only to inspect failures, verify selectors, or reproduce a bug interactively.
+7. Default to a mock-safe suite unless the user explicitly asks for live backend coverage.
+8. Keep evidence: HTML report, junit, logs, screenshots, traces.
+
+## Environment Preparation
+
+- If the user gives a repo root, pass it with `--repo`.
+- If the user gives a branch or ref, pass it with `--branch`.
+- If the user gives neither, align the regression target to `https://github.com/bytedance/deer-flow` and use the latest `main`.
+- When using the default target, make sure the local repo has an `upstream` remote pointing at `https://github.com/bytedance/deer-flow` or `git@github.com:bytedance/deer-flow.git`.
+- Prefer an isolated worktree over the user's dirty working tree whenever possible.
 
 ## Quick Start
 
@@ -66,14 +76,17 @@ bash ./scripts/run_deerflow_regression.sh \
 
 ## Standard Workflow
 
-1. Resolve repo root and verify it is a git worktree.
-2. Fetch `upstream/main` unless the user explicitly asks not to.
-3. Create a temporary detached worktree from `upstream/main`.
-4. Use the skill-bundled Playwright runner unless `--use-repo-config` is explicitly requested.
-5. Start the app if a start command was provided. Otherwise assume the target base URL is already serving.
-6. Run Playwright with `CI=1` and store artifacts under `.artifacts/playwright/<timestamp>/`.
-7. If tests fail, inspect the first failing spec and only then switch to `playwright-cli` for targeted debugging.
-8. Summarize failures with file paths to report, logs, and traces.
+1. Resolve the repo root and verify it is a git worktree.
+2. Determine the target repo/ref:
+   - use the user-specified repo/ref when provided
+   - otherwise align to the latest `main` from `https://github.com/bytedance/deer-flow`
+3. Fetch the selected remote/ref unless the user explicitly asks not to.
+4. Create a temporary detached worktree from the selected target ref.
+5. Use the skill-bundled Playwright runner unless `--use-repo-config` is explicitly requested.
+6. Start the app if a start command was provided. Otherwise assume the target base URL is already serving.
+7. Run Playwright with `CI=1` and store artifacts under `.artifacts/playwright/<timestamp>/`.
+8. If tests fail, inspect the first failing spec and only then switch to `playwright-cli` for targeted debugging.
+9. Summarize failures with file paths to report, logs, and traces.
 
 ## When To Use playwright-cli
 
