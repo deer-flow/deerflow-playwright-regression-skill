@@ -5,16 +5,15 @@ Use this reference only when the user asks to create or expand Playwright specs.
 ## P0 Daily Regression
 
 - workspace boot redirects correctly
-- new chat opens and sends a message
-- thread URL switches from `new` to a stable thread id
-- recent chat list loads and opens an existing thread
-- settings dialog opens and each section is reachable
-- skills settings loads and toggles a skill
+- new chat page loads
+- chats index page loads
+- existing thread page loads
 - agent creation flow validates name and reaches bootstrap chat
 
 ## P1 Nightly Smoke
 
-- live backend chat can stream a response
+- live models API returns configured models
+- live backend minimal run returns an assistant response
 - thread persistence survives page reload
 - thread rename and delete work
 - export markdown and export json trigger downloads
@@ -34,4 +33,3 @@ Use this reference only when the user asks to create or expand Playwright specs.
 - Keep live smoke intentionally small.
 - Test against `origin/main` in an isolated worktree, not the user's dirty workspace.
 - Use `playwright-cli` for failure diagnosis, not for the scheduled regression executor.
-
