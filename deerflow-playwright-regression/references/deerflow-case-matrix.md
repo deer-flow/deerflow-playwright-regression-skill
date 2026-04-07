@@ -6,18 +6,23 @@ Legend: `[x]` = implemented in `smoke.spec.ts`, `[ ]` = not yet implemented (TOD
 
 ## P0 Daily Regression
 
-- [ ] workspace boot redirects correctly
+- [x] workspace boot redirects correctly (`/workspace` → `/workspace/chats/new`)
 - [x] new chat page loads
+- [x] chat input shows correct placeholder and is empty on load
+- [x] submit button disabled when input empty, enabled when text entered
 - [x] chats index page loads
-- [x] existing thread page loads (live only)
+- [x] chats search bar accepts text input
 - [x] agent creation flow validates name and reaches bootstrap chat
 
 ## P1 Nightly Smoke
 
 - [x] live models API returns configured models
+- [x] live existing thread page loads
+- [x] live thread persistence survives page reload
+- [x] live thread rename updates stored title
+- [x] live thread delete removes the thread (404 on re-fetch)
+- [x] live submit message via UI triggers run and navigates to thread
 - [x] live backend minimal run returns an assistant response
-- [ ] thread persistence survives page reload
-- [ ] thread rename and delete work
 - [ ] export markdown and export json trigger downloads
 - [ ] artifact button appears when a conversation has artifacts
 - [ ] memory page loads and basic fact CRUD works

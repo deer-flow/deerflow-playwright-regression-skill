@@ -32,25 +32,39 @@ async function createTitledThread(request: APIRequestContext, title: string) {
   return created.thread_id;
 }
 
+// Stub /api/models for P0 mock tests that render the chat input.
+// The input box only renders the model selector after models are loaded, so
+// without this stub the textarea may not appear in mock mode.
+async function stubModels(page: import("@playwright/test").Page) {
+  await page.route("**/api/models", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        models: [
+          {
+            name: "mock-model",
+            display_name: "Mock Model",
+            supports_thinking: true,
+            supports_reasoning_effort: true,
+          },
+        ],
+      }),
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// P0 — run in both mock and live suites
+// ---------------------------------------------------------------------------
 test.describe("deer-flow local smoke", () => {
-  // P0 — run in both mock and live suites
+  test("workspace root redirects to new chat", async ({ page }) => {
+    await page.goto("/workspace");
+    await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  });
+
   test("workspace new chat page loads", async ({ page }) => {
     if (!isLiveSuite) {
-      await page.route("**/api/models", async (route) => {
-        await route.fulfill({
-          contentType: "application/json",
-          body: JSON.stringify({
-            models: [
-              {
-                name: "mock-model",
-                display_name: "Mock Model",
-                supports_thinking: true,
-                supports_reasoning_effort: true,
-              },
-            ],
-          }),
-        });
-      });
+      await stubModels(page);
     }
 
     await page.goto("/workspace/chats/new");
@@ -58,10 +72,42 @@ test.describe("deer-flow local smoke", () => {
     await expect(page.getByRole("textbox").first()).toBeVisible();
   });
 
+  test("chat input shows placeholder and is empty on load", async ({ page }) => {
+    if (!isLiveSuite) {
+      await stubModels(page);
+    }
+
+    await page.goto("/workspace/chats/new");
+    const textarea = page.locator('textarea[placeholder="How can I assist you today?"]');
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue("");
+  });
+
+  test("submitting empty input does not navigate away from new chat", async ({ page }) => {
+    if (!isLiveSuite) {
+      await stubModels(page);
+    }
+
+    await page.goto("/workspace/chats/new");
+    await expect(page.getByRole("textbox").first()).toBeVisible();
+
+    // The submit button is always enabled; empty submission is blocked
+    // programmatically, not via the HTML disabled attribute.
+    await page.getByRole("button", { name: "Submit" }).click();
+    await expect(page).toHaveURL(/\/workspace\/chats\/new$/);
+  });
+
   test("chats index page loads", async ({ page }) => {
     await page.goto("/workspace/chats");
     await expect(page).toHaveURL(/\/workspace\/chats$/);
     await expect(page.getByRole("searchbox")).toBeVisible();
+  });
+
+  test("chats search accepts text input", async ({ page }) => {
+    await page.goto("/workspace/chats");
+    const searchbox = page.getByRole("searchbox");
+    await searchbox.fill("test query");
+    await expect(searchbox).toHaveValue("test query");
   });
 
   test("agent creation page loads", async ({ page }) => {
@@ -71,7 +117,9 @@ test.describe("deer-flow local smoke", () => {
     await expect(page.getByPlaceholder("e.g. code-reviewer")).toBeVisible();
   });
 
+  // -------------------------------------------------------------------------
   // P1 — live backend only; nested describe so test.skip applies only here
+  // -------------------------------------------------------------------------
   test.describe("live", () => {
     test.skip(!isLiveSuite, "live-only smoke tests run only when DEERFLOW_E2E_SUITE=live");
 
@@ -87,16 +135,84 @@ test.describe("deer-flow local smoke", () => {
       expect(payload.models?.[0]?.name).toBeTruthy();
     });
 
-    test("live existing thread page loads", async ({
-      page,
-      request,
-    }) => {
+    test("live existing thread page loads", async ({ page, request }) => {
       const title = uniqueThreadTitle();
       const threadId = await createTitledThread(request, title);
 
       await page.goto(`/workspace/chats/${threadId}`);
       await expect(page).toHaveURL(new RegExp(`/workspace/chats/${threadId}$`));
       await expect(page.getByRole("textbox").first()).toBeVisible();
+    });
+
+    test("live thread persistence survives page reload", async ({ page, request }) => {
+      const threadId = await createTitledThread(request, uniqueThreadTitle());
+
+      await page.goto(`/workspace/chats/${threadId}`);
+      await expect(page).toHaveURL(new RegExp(`/workspace/chats/${threadId}$`));
+
+      await page.reload();
+
+      // After reload the thread page must still load correctly.
+      await expect(page).toHaveURL(new RegExp(`/workspace/chats/${threadId}$`));
+      await expect(page.getByRole("textbox").first()).toBeVisible();
+    });
+
+    test("live thread rename updates stored title", async ({ request }) => {
+      const threadId = await createTitledThread(request, uniqueThreadTitle());
+
+      const newTitle = `renamed-${Date.now()}`;
+      const renameRes = await request.post(`/api/threads/${threadId}/state`, {
+        data: { values: { title: newTitle }, as_node: "playwright" },
+      });
+      expect(renameRes.ok()).toBeTruthy();
+
+      // The POST /state response returns the updated values directly.
+      // (GET /api/threads/{id}/state returns values:{} for this graph;
+      //  the canonical read path for title is the POST response or search API.)
+      const updated = (await renameRes.json()) as { values?: { title?: string } };
+      expect(updated.values?.title).toBe(newTitle);
+    });
+
+    test("live thread delete removes the thread", async ({ request }) => {
+      const threadId = await createTitledThread(request, uniqueThreadTitle());
+
+      // Confirm it exists before deletion.
+      const beforeRes = await request.get(`/api/threads/${threadId}`);
+      expect(beforeRes.ok()).toBeTruthy();
+
+      // Delete it.
+      const deleteRes = await request.delete(`/api/threads/${threadId}`);
+      expect(deleteRes.ok()).toBeTruthy();
+
+      // A subsequent fetch must return 404.
+      const afterRes = await request.get(`/api/threads/${threadId}`);
+      expect(afterRes.status()).toBe(404);
+    });
+
+    test("live submit message via UI triggers run and navigates to thread", async ({ page }) => {
+      await page.goto("/workspace/chats/new");
+      const textarea = page.locator('textarea[placeholder="How can I assist you today?"]');
+      await expect(textarea).toBeVisible();
+
+      await textarea.fill("Say hello in one sentence.");
+
+      // Capture the streaming request before clicking submit.
+      const streamPromise = page.waitForRequest(
+        (req) =>
+          (req.url().includes("/runs/stream") || req.url().includes("/runs/wait")) &&
+          req.method() === "POST",
+        { timeout: 10_000 },
+      );
+
+      await page.getByRole("button", { name: "Submit" }).click();
+
+      // URL must change from /new to /workspace/chats/<uuid>.
+      await expect(page).toHaveURL(/\/workspace\/chats\/(?!new)[a-z0-9-]+$/, {
+        timeout: 10_000,
+      });
+
+      // A run request must have been dispatched.
+      await streamPromise;
     });
 
     test("live backend wait run returns an assistant response", async ({
